@@ -59,7 +59,7 @@ func (gatewayAccount GatewayAccount) ReadAmount() float64 {
 }
 
 func (gatewayAccount GatewayAccount) ReadPaymentMethod() PaymentMethod {
-	fmt.Println("Select Payment method:")
+	fmt.Println("\n\nSelect Payment method:")
 	fmt.Println("1. Credit Card")
 	fmt.Println("2. PayPal")
 	fmt.Println("3. Cryptocurrency")
