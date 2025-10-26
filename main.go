@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -60,9 +61,6 @@ var (
 	reader         = bufio.NewReader(os.Stdin)
 )
 
-// find a random status from Success, Failed, Pending
-var status = []string{"Success", "Failed", "Pending"}
-
 func main() {
 	for {
 		displayMenu()
@@ -73,7 +71,9 @@ func main() {
 			customer := readCustomerDetails()
 			transaction := customer.makePayment()
 			gatewayAccount.Transactions = append(gatewayAccount.Transactions, transaction)
-			gatewayAccount.Balance += transaction.Amount
+			if transaction.Status == "Success" {
+				gatewayAccount.Balance += transaction.Amount
+			}
 			fmt.Println("Gateway account balance: ", gatewayAccount.Balance)
 		case 2:
 			requestRefund()
@@ -86,7 +86,6 @@ func main() {
 }
 
 func displayMenu() {
-	fmt.Println("\n\n\n------ Welcome to Thoughtline payment gateway! ------")
 	fmt.Println("\n\n\n------ Menu --------")
 	fmt.Println("1. Make a payment")
 	fmt.Println("2. Request a refund")
@@ -108,7 +107,7 @@ func (customer Customer) makePayment() Transaction {
 	fmt.Scanln(&method)
 
 	// Generating random status for transaction - for easiness
-	transactionStatus := status[rand.Intn(len(status))]
+	transactionStatus := "Success"
 	description := "Payment made successfully"
 	var methodDetails any
 	switch method {
@@ -173,14 +172,31 @@ func (customer Customer) makePayment() Transaction {
 
 func requestRefund() {
 
-	fmt.Println("Not implemented yet")
-	return
-
-	fmt.Println("Enter the transaction ID:")
 	var transactionID int
+	fmt.Println("Enter the transaction ID:")
 	fmt.Scanln(&transactionID)
 
-	// TODO: Implement refund logic
+	for _, transaction := range gatewayAccount.Transactions {
+		if transaction.ID == transactionID {
+
+			refundTransaction := Transaction{
+				ID:            rand.Intn(1000000),
+				Amount:        transaction.Amount,
+				Status:        "Refunded",
+				Method:        transaction.Method,
+				Customer:      transaction.Customer,
+				Type:          "Refund",
+				Description:   "Refunded for transaction ID " + strconv.Itoa(transaction.ID),
+				MethodDetails: transaction.MethodDetails,
+			}
+
+			gatewayAccount.Balance -= transaction.Amount
+			gatewayAccount.Transactions = append(gatewayAccount.Transactions, refundTransaction)
+			fmt.Println("Refunded amount: ", transaction.Amount, " successfully to your original source")
+			return
+		}
+	}
+	fmt.Println("Could not find the transaction with ID: ", transactionID, ". Please try again with a valid transaction ID.")
 }
 
 func viewTransactionHistory() {
@@ -192,7 +208,8 @@ func viewTransactionHistory() {
 		return
 	}
 
-	fmt.Println("\nTotal transactions: ", totalTransactions)
+	fmt.Println("\nTotal transactions till date: ", totalTransactions)
+	fmt.Println("\nGateway account balance: ", gatewayAccount.Balance)
 
 	for index, transaction := range gatewayAccount.Transactions {
 		fmt.Println("\nTransaction ", index+1, ":")
