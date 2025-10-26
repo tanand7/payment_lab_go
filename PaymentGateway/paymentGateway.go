@@ -1,17 +1,18 @@
 package paymentGateway
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
 )
 
-type PaymentMethod string
+type PaymentMethod int
 
 const (
-	creditCard     PaymentMethod = "Credit Card"
-	paypal         PaymentMethod = "PayPal"
-	cryptoCurrency PaymentMethod = "Crypto Currency"
+	creditCard     PaymentMethod = 1
+	paypal         PaymentMethod = 2
+	cryptoCurrency PaymentMethod = 3
 )
 
 type GatewayAccount struct {
@@ -23,7 +24,8 @@ type PaymentGateway interface {
 	InitializeTransaction() Transaction
 	ReadAmount() float64
 	ReadPaymentMethod() PaymentMethod
-	MakePayment(amount float64, method PaymentMethod, customer Customer) Transaction
+	ReadPaymentSource(method PaymentMethod) (any, error)
+	MakePayment(amount float64, method PaymentMethod, customer Customer, source any) Transaction
 	ReadTransactionID() int
 	RequestRefund(transactionID int)
 	ViewTransactionHistory()
@@ -31,26 +33,32 @@ type PaymentGateway interface {
 
 func (gatewayAccount *GatewayAccount) InitializeTransaction() {
 
+	customer := ReadCustomerDetails()
+	method := gatewayAccount.ReadPaymentMethod()
+	amount := gatewayAccount.ReadAmount()
+	paymentSource, err := gatewayAccount.ReadPaymentSource(method)
 
-	
-	customer := readCustomerDetails()
-	transaction := customer.makePayment()
+	if err != nil {
+		fmt.Println("Transaction failed: ", err)
+		return
+	}
+
+	transaction := gatewayAccount.MakePayment(amount, method, customer, paymentSource)
 	gatewayAccount.Transactions = append(gatewayAccount.Transactions, transaction)
 	if transaction.Status == "Success" {
 		gatewayAccount.Balance += transaction.Amount
 	}
 	fmt.Println("Gateway account balance: ", gatewayAccount.Balance)
-
 }
 
-func ReadAmount() float64 {
+func (gatewayAccount GatewayAccount) ReadAmount() float64 {
 	fmt.Println("Enter the amount:")
 	var amount float64
 	fmt.Scanln(&amount)
 	return amount
 }
 
-func ReadPaymentMethod() PaymentMethod {
+func (gatewayAccount GatewayAccount) ReadPaymentMethod() PaymentMethod {
 	fmt.Println("Select Payment method:")
 	fmt.Println("1. Credit Card")
 	fmt.Println("2. PayPal")
@@ -60,53 +68,44 @@ func ReadPaymentMethod() PaymentMethod {
 	return method
 }
 
-func (customer Customer) MakePayment() Transaction {
-
-	// Generating random status for transaction - for easiness
-	transactionStatus := "Success"
-	description := "Payment made successfully"
-	var methodDetails any
+func (gatewayAccount GatewayAccount) ReadPaymentSource(method PaymentMethod) (any, error) {
 	switch method {
 	case creditCard:
-		// TODO: Replace with the new method
-		// fmt.Println("Enter the credit card number:")
-		// var creditCard CreditCard
-		// fmt.Scanln(&creditCard.CardNumber)
-		// fmt.Println("Enter the CVV:")
-		// fmt.Scanln(&creditCard.CVV)
-		// fmt.Println("Enter the expiry date:")
-		// fmt.Scanln(&creditCard.ExpiryDate)
-		// if !creditCard.IsValidCreditCard() {
-		// 	transactionStatus = "Failed"
-		// 	description = "Invalid credit card details. Please try again"
-		// 	fmt.Println(description)
-		// }
-		methodDetails = creditCard
-	case paypal:
-		// TODO: Replace with the new method
-		// var paypal PayPal
-		// paypal.Email = readNonEmptyString("Enter the email:")
-		// paypal.AuthToken = readNonEmptyString("Enter the authentication token:")
-		// methodDetails = paypal
-		// if !paypal.IsValidPayPal() {
-		// 	transactionStatus = "Failed"
-		// 	description = "Invalid PayPal details. Please try again"
-		// 	fmt.Println(description)
-		// }
-	case cryptocurrency:
-		var cryptocurrency Cryptocurrency
-		cryptocurrency.WalletAddress = readNonEmptyString("Enter the wallet address:")
-		methodDetails = cryptocurrency
-		if !cryptocurrency.IsValidCrypto() {
-			transactionStatus = "Failed"
-			description = "Invalid cryptocurrency details. Please try again"
-			fmt.Println(description)
+		var creditCard CreditCard
+		creditCard.ReadCardDetails()
+		valid, err := creditCard.IsValidCreditCard()
+		if !valid {
+			fmt.Println(err)
+			return nil, err
 		}
+		return creditCard, nil
+	case paypal:
+		var paypal PayPal
+		paypal.ReadPaypalDetails()
+		valid, err := paypal.IsValidPayPal()
+		if !valid {
+			fmt.Println(err)
+			return nil, err
+		}
+		return paypal, nil
+	case cryptoCurrency:
+		var cryptoCurrency CryptoCurrency
+		cryptoCurrency.ReadCryptoCurrencyDetails()
+		valid, err := cryptoCurrency.IsValidCryptoCurrency()
+		if !valid {
+			fmt.Println(err)
+			return nil, err
+		}
+		return cryptoCurrency, nil
 	default:
-		transactionStatus = "Failed"
-		description = "Invalid payment method. Please try again"
-		fmt.Println(description)
+		return nil, errors.New("invalid payment method, please try again")
 	}
+}
+
+func (gatewayAccount *GatewayAccount) MakePayment(amount float64, method PaymentMethod, customer Customer, source any) Transaction {
+
+	transactionStatus := "Success"
+	description := "Payment made successfully"
 
 	transaction := Transaction{
 		ID:            rand.Intn(1000000),
@@ -116,7 +115,7 @@ func (customer Customer) MakePayment() Transaction {
 		Customer:      customer,
 		Type:          "Payment",
 		Description:   description,
-		MethodDetails: methodDetails,
+		MethodDetails: source,
 	}
 
 	if transactionStatus == "Success" {

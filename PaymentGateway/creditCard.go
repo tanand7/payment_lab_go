@@ -1,6 +1,9 @@
 package paymentGateway
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type CreditCard struct {
 	CardNumber string // 16 length string
@@ -8,25 +11,21 @@ type CreditCard struct {
 	ExpiryDate string // MM/YY
 }
 
-func (card CreditCard) IsValidCreditCard() bool {
+func (card CreditCard) IsValidCreditCard() (bool, error) {
 	if len(card.CardNumber) != 16 {
-		fmt.Println("Card number must be 16 digits")
-		return false
+		return false, errors.New("card number must be 16 digits")
 	}
 	if len(card.CVV) != 3 {
-		fmt.Println("CVV must be 3 digits")
-		return false
+		return false, errors.New("CVV must be 3 digits")
 	}
 	if len(card.ExpiryDate) != 5 {
-		fmt.Println("Expiry date must be in MM/YY format")
-		return false
+		return false, errors.New("expiry date must be in MM/YY format")
 	}
 	if card.ExpiryDate[2] != '/' {
-		fmt.Println("Expiry date must be in MM/YY format")
-		return false
+		return false, errors.New("expiry date must be in MM/YY format")
 	}
 
-	return true
+	return true, nil
 }
 
 func (card *CreditCard) ReadCardDetails() {

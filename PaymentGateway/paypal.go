@@ -1,7 +1,7 @@
 package paymentGateway
 
 import (
-	"fmt"
+	"errors"
 	helpers "payment_lab/Helpers"
 	"strings"
 )
@@ -11,19 +11,17 @@ type PayPal struct {
 	AuthToken string
 }
 
-func (paypal PayPal) IsValidPayPal() bool {
+func (paypal PayPal) IsValidPayPal() (bool, error) {
 	if len(paypal.AuthToken) < 10 {
-		fmt.Println("Authentication token must be at least 10 characters long")
-		return false
+		return false, errors.New("authentication token must be at least 10 characters long")
 	}
 	if !strings.Contains(paypal.Email, "@") {
-		fmt.Println("Email must contain @")
-		return false
+		return false, errors.New("email must contain @")
 	}
-	return true
+	return true, nil
 }
 
-func (paypal *PayPal) ReadPayPalDetails() {
+func (paypal *PayPal) ReadPaypalDetails() {
 	paypal.Email = helpers.ReadNonEmptyString("Enter the email:")
 	paypal.AuthToken = helpers.ReadNonEmptyString("Enter the authentication token:")
 }
