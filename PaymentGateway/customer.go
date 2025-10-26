@@ -1,4 +1,4 @@
-package paymentGateway
+package PaymentGateway
 
 import (
 	"math/rand"

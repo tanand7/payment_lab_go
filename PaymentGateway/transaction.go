@@ -1,4 +1,4 @@
-package paymentGateway
+package PaymentGateway
 
 type Transaction struct {
 	ID            int
